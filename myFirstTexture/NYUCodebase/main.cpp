@@ -27,7 +27,7 @@ GLuint LoadTexture(const char *image_path) {
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA, surface->w, surface->h, 0, GL_BGRA,GL_UNSIGNED_BYTE, surface->pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_BGRA,GL_UNSIGNED_BYTE, surface->pixels);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     SDL_FreeSurface(surface);
@@ -65,9 +65,9 @@ int main(int argc, char *argv[])
     float angle = 0.0f;
     
     // Load the textures our program is gonna use
-    GLuint fireTexture = LoadTexture("/Users/Akira/Documents/2016 Spring Semester NYU/Game Programing/GameProgramming/myFirstTexture/NYUCodebase/images/fire2.png");
-    GLuint medalTexture = LoadTexture("/Users/Akira/Documents/2016 Spring Semester NYU/Game Programing/GameProgramming/myFirstTexture/NYUCodebase/images/flat_medal9.png");
-    GLuint tileTexture = LoadTexture("/Users/Akira/Documents/2016 Spring Semester NYU/Game Programing/GameProgramming/myFirstTexture/NYUCodebase/images/rpgTile181.png");
+    GLuint fireTexture = LoadTexture(RESOURCE_FOLDER"images/fire2.png");
+    GLuint medalTexture = LoadTexture(RESOURCE_FOLDER"images/flat_medal9.png");
+    GLuint tileTexture = LoadTexture(RESOURCE_FOLDER"images/rpgTile181.png");
     
     
     projectionMatrix.setOrthoProjection(-3.55, 3.55, -2.0f, 2.0f, -1.0f, 1.0f);
@@ -115,6 +115,9 @@ int main(int argc, char *argv[])
         glBindTexture(GL_TEXTURE_2D, fireTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
         
+        glDisableVertexAttribArray(program.positionAttribute);
+        glDisableVertexAttribArray(program.texCoordAttribute);
+        
         /* Now do it again for the other participants in the scene */
         
         // The fun stuff we doing to the Matrix
@@ -144,6 +147,9 @@ int main(int argc, char *argv[])
         // Now get the actual texture loaded and draw the arrays out
         glBindTexture(GL_TEXTURE_2D, medalTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+        
+        glDisableVertexAttribArray(program.positionAttribute);
+        glDisableVertexAttribArray(program.texCoordAttribute);
         
         /* Now once more! */
         
@@ -181,6 +187,8 @@ int main(int argc, char *argv[])
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         
         SDL_GL_SwapWindow(displayWindow);
+        
+        
         
         glDisableVertexAttribArray(program.positionAttribute);
         glDisableVertexAttribArray(program.texCoordAttribute);
