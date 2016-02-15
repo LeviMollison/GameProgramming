@@ -58,12 +58,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "NYUCodebase/main.cpp"
-            timestampString = "477169468.28818"
+            timestampString = "477180684.698729"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "112"
             endingLineNumber = "112"
-            landmarkName = "render(ShaderProgram *program, std::vector&lt;float&gt; &amp;vertexData, std::vector&lt;float&gt; &amp;textureCoordData, GLuint fontTexture, std::string text)"
+            landmarkName = "render(ShaderProgram *program, std::vector&lt;float&gt; &amp;vertexData, std::vector&lt;float&gt; &amp;textureCoordData, GLuint fontTexture, std::string text, Matrix &amp;modelMatrix, Matrix &amp;viewMatrix, Matrix &amp;projectionMatrix)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -79,7 +79,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "111"
             endingLineNumber = "111"
-            landmarkName = "render(ShaderProgram *program, std::vector&lt;float&gt; &amp;vertexData, std::vector&lt;float&gt; &amp;textureCoordData, GLuint fontTexture, std::string text)"
+            landmarkName = "render(ShaderProgram *program, std::vector&lt;float&gt; &amp;vertexData, std::vector&lt;float&gt; &amp;textureCoordData, GLuint fontTexture, std::string text, Matrix &amp;modelMatrix, Matrix &amp;viewMatrix, Matrix &amp;projectionMatrix)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -90,11 +90,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "NYUCodebase/main.cpp"
-            timestampString = "477169764.740709"
+            timestampString = "477180684.698729"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "164"
-            endingLineNumber = "164"
+            startingLineNumber = "168"
+            endingLineNumber = "168"
             landmarkName = "main(int argc, char *argv[])"
             landmarkType = "7">
          </BreakpointContent>
@@ -106,11 +106,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "NYUCodebase/main.cpp"
-            timestampString = "477169781.821553"
+            timestampString = "477180684.698729"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "165"
-            endingLineNumber = "165"
+            startingLineNumber = "169"
+            endingLineNumber = "169"
             landmarkName = "main(int argc, char *argv[])"
             landmarkType = "7">
          </BreakpointContent>
@@ -122,12 +122,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "NYUCodebase/main.cpp"
-            timestampString = "477169834.507042"
+            timestampString = "477180684.698729"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "124"
-            endingLineNumber = "124"
-            landmarkName = "render(ShaderProgram *program, std::vector&lt;float&gt; &amp;vertexData, std::vector&lt;float&gt; &amp;textureCoordData, GLuint fontTexture, std::string text)"
+            startingLineNumber = "128"
+            endingLineNumber = "128"
+            landmarkName = "render(ShaderProgram *program, std::vector&lt;float&gt; &amp;vertexData, std::vector&lt;float&gt; &amp;textureCoordData, GLuint fontTexture, std::string text, Matrix &amp;modelMatrix, Matrix &amp;viewMatrix, Matrix &amp;projectionMatrix)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

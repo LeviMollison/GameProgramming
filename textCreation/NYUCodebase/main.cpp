@@ -102,14 +102,18 @@ void drawText(std::vector<float> &vertexData, std::vector<float> &textureCoordDa
 }
 
 // draws declared objects onto the displayscreen
-void render(ShaderProgram *program, std::vector<float> &vertexData, std::vector<float> &textureCoordData, GLuint fontTexture, std::string text)
+void render(ShaderProgram *program, std::vector<float> &vertexData, std::vector<float> &textureCoordData, GLuint fontTexture, std::string text, Matrix &modelMatrix, Matrix &viewMatrix, Matrix &projectionMatrix)
 {
     glClearColor(0.3, 0.7, 0.8, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
     
-    drawText(vertexData, textureCoordData, text, 1.2f, 0.5f);
+    drawText(vertexData, textureCoordData, text, 0.5f, 0.1f);
     
     glUseProgram(program->programID);
+    
+    program->setModelMatrix(modelMatrix);
+    program->setProjectionMatrix(projectionMatrix);
+    program->setViewMatrix(viewMatrix);
     
     glVertexAttribPointer(program->positionAttribute, 2, GL_FLOAT, false, 0, vertexData.data());
     glEnableVertexAttribArray(program->positionAttribute);
@@ -160,7 +164,7 @@ int main(int argc, char *argv[])
     while (!done) {
         processEvents(event, done);
         update(projectionMatrix, viewMatrix, modelMatrix, lastFrameTicks, framesPerSecond);
-        render(&program, vertexData, textureCoordData, fontTexture, "Hello World");
+        render(&program, vertexData, textureCoordData, fontTexture, "Hello World", modelMatrix, viewMatrix, projectionMatrix);
     }
     cleanUp(&program);
     
