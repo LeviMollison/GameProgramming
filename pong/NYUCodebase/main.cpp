@@ -145,7 +145,7 @@ void cleanUp(ShaderProgram &program)
     SDL_Quit();
 }
 
-void moveBall(Entity &ball, float &elapsed,float &angle){
+void moveBall(Entity &ball, float &elapsed){
     // vector math
     ball.y = sinf(ball.direction_y)*elapsed*ball.speed + ball.y;
     ball.x = cosf(ball.direction_x)*elapsed*ball.speed + ball.x;
@@ -158,7 +158,7 @@ void update(std::string &textToDraw, float &lastFrameTicks, float &elapsed, floa
     elapsed = ticks - lastFrameTicks;
     lastFrameTicks = ticks;
     angle+=elapsed;
-    moveBall(ball, elapsed, angle);
+    moveBall(ball, elapsed);
     if (ball.x >= 3.0f){
         textToDraw = "Left Paddle Won!";
     }
@@ -192,7 +192,7 @@ void update(std::string &textToDraw, float &lastFrameTicks, float &elapsed, floa
         rec.y - rec.height/2 = top
         rec.y = bot
     */
-    // Colliding with paddle 1
+    // Colliding
     float top, bot, left, right;
     float ptop, pbot, pleft, pright;
     top = ball.y + ball.height / 2.0;
@@ -200,6 +200,7 @@ void update(std::string &textToDraw, float &lastFrameTicks, float &elapsed, floa
     left = ball.x - ball.width / 2.0;
     right = ball.x + ball.width/2.0;
     
+    // Right Paddle
     ptop = paddle.y + paddle.height/2.0;
     pbot = paddle.y - paddle.height/2.0;
     pleft = paddle.x - paddle.width / 2.0;
@@ -212,6 +213,7 @@ void update(std::string &textToDraw, float &lastFrameTicks, float &elapsed, floa
         ball.direction_x+=180;
     }
     
+    // Left Paddle
     ptop = paddle2.y + paddle2.height/2.0;
     pbot = paddle2.y - paddle2.height/2.0;
     pleft = paddle2.x - paddle2.width / 2.0;
