@@ -122,7 +122,7 @@ void DrawText(ShaderProgram *program, Matrix &modelMatrix, int fontTexture, std:
             texture_x + texture_size, texture_y + texture_size,
             texture_x + texture_size, texture_y,
             texture_x, texture_y + texture_size,
-}); }
+        }); }
     modelMatrix.identity();
     modelMatrix.Translate(-2.5f, 1.5f, 0.0f);
     program->setModelMatrix(modelMatrix);
@@ -195,15 +195,15 @@ void update(std::string &textToDraw, float &lastFrameTicks, float &elapsed, floa
     // Colliding with paddle 1
     float top, bot, left, right;
     float ptop, pbot, pleft, pright;
-    top = ball.y - ball.height / 2.0;
-    bot = ball.y;
+    top = ball.y + ball.height / 2.0;
+    bot = ball.y - ball.height/2.0;
     left = ball.x - ball.width / 2.0;
-    right = ball.x;
+    right = ball.x + ball.width/2.0;
     
-    ptop = paddle.x - paddle.height/2.0;
-    pbot = paddle.y;
+    ptop = paddle.y + paddle.height/2.0;
+    pbot = paddle.y - paddle.height/2.0;
     pleft = paddle.x - paddle.width / 2.0;
-    pright = paddle.x;
+    pright = paddle.x + paddle.width/2.0;
     if(pbot >= top || ptop <= bot || pleft >= right || pright <= left){
         
     }
@@ -211,10 +211,10 @@ void update(std::string &textToDraw, float &lastFrameTicks, float &elapsed, floa
         ball.direction_x+=180;
     }
     
-    ptop = paddle2.x - paddle2.height/2.0;
-    pbot = paddle2.y;
+    ptop = paddle2.y + paddle2.height/2.0;
+    pbot = paddle2.y - paddle2.height/2.0;
     pleft = paddle2.x - paddle2.width / 2.0;
-    pright = paddle2.x;
+    pright = paddle2.x + paddle2.width/2.0;
     if(pbot >= top || ptop <= bot || pleft >= right || pright <= left){
         
     }
@@ -252,11 +252,7 @@ void render(ShaderProgram &program, std::string &textToDraw, Matrix &modelMatrix
 void processEvents(SDL_Event &event, bool &done, float &elapsed, Entity &paddle, Entity &paddle2, Entity &ball)
 {
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
-    while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_QUIT || event.type == SDL_WINDOWEVENT_CLOSE) {
-            done = true;
-        }
-        if (keys[SDL_SCANCODE_UP]){
+    if (keys[SDL_SCANCODE_UP]){
             paddle.y = 1*elapsed*paddle.speed + paddle.y;
         }
         if (keys[SDL_SCANCODE_DOWN]){
@@ -268,6 +264,10 @@ void processEvents(SDL_Event &event, bool &done, float &elapsed, Entity &paddle,
         if (keys[SDL_SCANCODE_S]) {
             paddle2.y = -1*elapsed*paddle2.speed + paddle2.y;
         }
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT || event.type == SDL_WINDOWEVENT_CLOSE) {
+            done = true;
+        }
     }
 }
 
@@ -275,12 +275,13 @@ int main(int argc, char *argv[])
 {
     setup();
     ShaderProgram program(RESOURCE_FOLDER"vertex_textured.glsl", RESOURCE_FOLDER"fragment_textured.glsl");
-    Entity paddle = Entity(modelMatrix, 1.0f, 1.0f, 4.0f, "white.jpg", 11.0f, 0.5f, 0.3f, 1.0f);
-    Entity paddle2 = Entity(modelMatrix, 1.0f, 1.0f, 4.0f, "white.jpg", -11.0f, 0.5f, 0.3f, 1.0f);
-    Entity ball = Entity(modelMatrix, 45.0, 45.0, 5.0f, "ball.png", 0.0f, 0.5f, 0.2f, 0.2f);
     Matrix projectionMatrix;
     Matrix viewMatrix;
     Matrix modelMatrix;
+    Entity paddle = Entity(modelMatrix, 1.0f, 1.0f, 4.0f, "white.jpg", 11.0f, 0.5f, 0.3f, 1.0f);
+    Entity paddle2 = Entity(modelMatrix, 1.0f, 1.0f, 4.0f, "white.jpg", -11.0f, 0.5f, 0.3f, 1.0f);
+    Entity ball = Entity(modelMatrix, 45.0, 45.0, 5.0f, "ball.png", 0.0f, 0.5f, 0.2f, 0.2f);
+    
     // Variables can, for now, be global
     SDL_Event event;
     bool done = false;
