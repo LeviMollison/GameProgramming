@@ -70,8 +70,8 @@ public:
     void draw(ShaderProgram &program){
     
         this->modelMatrix.identity();
-        this->modelMatrix.Scale(width, height, 1.0f);
         this->modelMatrix.Translate(x, y, 0.0f);
+        this->modelMatrix.Scale(width, height, 1.0f);
         
         program.setModelMatrix(modelMatrix);
         glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, this->vertices.data());
@@ -159,14 +159,14 @@ void update(std::string &textToDraw, float &lastFrameTicks, float &elapsed, floa
     lastFrameTicks = ticks;
     angle+=elapsed;
     moveBall(ball, elapsed, angle);
-    if (ball.x >= 18.0f){
+    if (ball.x >= 3.0f){
         textToDraw = "Left Paddle Won!";
     }
-    if (ball.x <= -18.0f){
+    if (ball.x <= -3.0f){
         textToDraw = "Right Paddle Won!";
     }
         
-    if (ball.x >= 18.0f || ball.x <= -18.0)
+    if (ball.x >= 3.0f || ball.x <= -3.0)
         {
             ball.x = 0.5;
             ball.y = 0.0;
@@ -181,7 +181,7 @@ void update(std::string &textToDraw, float &lastFrameTicks, float &elapsed, floa
             }
             
         }
-    if (ball.y >= 9.0f || ball.y <= -9.0)
+    if (ball.y >= 1.8f || ball.y <= -1.8)
         {
             ball.direction_y += 180;
         }
@@ -204,7 +204,8 @@ void update(std::string &textToDraw, float &lastFrameTicks, float &elapsed, floa
     pbot = paddle.y - paddle.height/2.0;
     pleft = paddle.x - paddle.width / 2.0;
     pright = paddle.x + paddle.width/2.0;
-    if(pbot >= top || ptop <= bot || pleft >= right || pright <= left){
+   // printf("ball's right x: %f, paddle left's x %f \n", right, pleft);
+    if(pbot > top || ptop < bot || pleft > right || pright < left){
         
     }
     else{
@@ -215,7 +216,7 @@ void update(std::string &textToDraw, float &lastFrameTicks, float &elapsed, floa
     pbot = paddle2.y - paddle2.height/2.0;
     pleft = paddle2.x - paddle2.width / 2.0;
     pright = paddle2.x + paddle2.width/2.0;
-    if(pbot >= top || ptop <= bot || pleft >= right || pright <= left){
+    if(pbot > top || ptop < bot || pleft > right || pright < left){
         
     }
     else{
@@ -252,16 +253,16 @@ void render(ShaderProgram &program, std::string &textToDraw, Matrix &modelMatrix
 void processEvents(SDL_Event &event, bool &done, float &elapsed, Entity &paddle, Entity &paddle2, Entity &ball)
 {
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
-    if (keys[SDL_SCANCODE_UP]){
+    if (keys[SDL_SCANCODE_UP] && paddle.y < 1.8){
             paddle.y = 1*elapsed*paddle.speed + paddle.y;
         }
-        if (keys[SDL_SCANCODE_DOWN]){
+        if (keys[SDL_SCANCODE_DOWN] && paddle.y > -1.8){
             paddle.y = -1*elapsed*paddle.speed + paddle.y;
         }
-        if (keys[SDL_SCANCODE_W]) {
+        if (keys[SDL_SCANCODE_W] && paddle2.y < 1.8) {
             paddle2.y = 1*elapsed*paddle2.speed + paddle2.y;
         }
-        if (keys[SDL_SCANCODE_S]) {
+        if (keys[SDL_SCANCODE_S] && paddle2.y > -1.8) {
             paddle2.y = -1*elapsed*paddle2.speed + paddle2.y;
         }
     while (SDL_PollEvent(&event)) {
@@ -278,9 +279,11 @@ int main(int argc, char *argv[])
     Matrix projectionMatrix;
     Matrix viewMatrix;
     Matrix modelMatrix;
-    Entity paddle = Entity(modelMatrix, 1.0f, 1.0f, 4.0f, "white.jpg", 11.0f, 0.5f, 0.3f, 1.0f);
-    Entity paddle2 = Entity(modelMatrix, 1.0f, 1.0f, 4.0f, "white.jpg", -11.0f, 0.5f, 0.3f, 1.0f);
-    Entity ball = Entity(modelMatrix, 45.0, 45.0, 5.0f, "ball.png", 0.0f, 0.5f, 0.2f, 0.2f);
+    Entity paddle = Entity(modelMatrix, 1.0f, 1.0f, 4.0f, "white.jpg", 3.0f, 0.5f, 0.3f, 1.0f);
+    
+    Entity paddle2 = Entity(modelMatrix, 1.0f, 1.0f, 4.0f, "white.jpg", -3.0f, 0.5f, 0.3f, 1.0f);
+    
+    Entity ball = Entity(modelMatrix, 45.0, 45.0, 2.0f, "ball.png", 0.0f, 0.5f, 0.2f, 0.2f);
     
     // Variables can, for now, be global
     SDL_Event event;
