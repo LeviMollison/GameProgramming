@@ -68,8 +68,8 @@ void DrawText(ShaderProgram *program, GLuint &fontTexture, std::string text, flo
     matrix.Translate(xCord, yCord, 0.0f);
     program->setModelMatrix(matrix);
     
-    glUseProgram(program->programID);
     
+    glUseProgram(program->programID);
     glBindTexture(GL_TEXTURE_2D, fontTexture);
     
     glVertexAttribPointer(program->positionAttribute, 2, GL_FLOAT, false, 0, vertexData.data());
@@ -192,7 +192,6 @@ public:
         matrix.identity();
         matrix.Translate(x, y, 0);
         matrix.Scale(width, height, 1.0f);
-        matrix.Rotate(rotation);
     }
    
     /*
@@ -251,10 +250,16 @@ public:
                 if (stateObjects[i].alive){
                     stateObjects[i].position();
                     stateObjects[i].sprite.draw(program);
+                    printf("Drawing Object %d Size of State Objects is still %d \n", i, (int)stateObjects.size());
                 }
             }
         }
         
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        
+        
+        glDisable(GL_BLEND);
         // Now handle the main menu
         if (gameState == 0){
         /*
@@ -270,8 +275,6 @@ public:
             DrawText(program, fontTexture, "Game Over. Play Again? (press p)", 0.3f, 0.05f, -2.0f, 1.5f, modelMatrix);
         }
         
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
         SDL_GL_SwapWindow(displayWindow);
     }
@@ -281,7 +284,7 @@ public:
         Don't worry about correct time. This will only run based on correct time
     */
     
-    void update(ShaderProgram *program, GLuint &fontTexture, SDL_Event &event, bool &done, float fixedElapsed, GameState &innactiveState, GLuint &game_texture);
+    void update(ShaderProgram *program, GLuint &fontTexture, SDL_Event &event, bool &done, float fixedElapsed, GameState &innactiveState, GLuint &game_texture, int &currentState);
 };
 
 // Convert from degrees to radians
@@ -314,16 +317,16 @@ void reset(GameState &state, GLuint &gameTexture){
         state.stateObjects.push_back(player);
         // Create the 30 invaders
         SpriteSheet invader = SpriteSheet(gameTexture, 423/1024, 728/1024, 93/1024, 84/1024, 1024);
-        float x_pos = -3.45f;
-        float y_pos = 1.8f;
+        float x_pos = -3.3f;
+        float y_pos = 1.5f;
         float current_dir = 1;
         for (int i = 0; i < 30; i++){
             Matrix new_matrix;
-            Entity new_invader = Entity(invader, new_matrix, x_pos, y_pos, 0.5f, 0.5f, -90.0f, 2.0f, false, false, current_dir);
+            Entity new_invader = Entity(invader, new_matrix, x_pos, y_pos, 1.0f, 1.0f, -90.0f, 2.0f, false, false, current_dir);
             state.stateObjects.push_back(new_invader);
             x_pos+=0.5;
             if (i % 10 == 0){
-                x_pos = -3.45;
+                x_pos = -3.3;
                 y_pos -= 0.5;
                 current_dir *= -1;
             }
@@ -389,13 +392,14 @@ void processEvents(SDL_Event &event, bool &done, float &timePerFrame, GameState&
     if (state.gameState == 0){
         if (keys[SDL_SCANCODE_P]){
             currentState = innactiveState.gameState;
+            innactiveState.active = true;
         }
     }
 }
 
 
-inline void GameState::update(ShaderProgram *program, GLuint &fontTexture, SDL_Event &event, bool &done, float fixedElapsed, GameState &innactiveState, GLuint &game_texture){
-    processEvents(event, done, fixedElapsed, *this, innactiveState, gameState, game_texture);
+inline void GameState::update(ShaderProgram *program, GLuint &fontTexture, SDL_Event &event, bool &done, float fixedElapsed, GameState &innactiveState, GLuint &game_texture, int &currentState){
+    processEvents(event, done, fixedElapsed, *this, innactiveState, currentState, game_texture);
     if (gameState == 1 && active){
         for (int i = 0; i < stateObjects.size(); i++) {
             if (!stateObjects[i].affectedByPlayer){
@@ -532,8 +536,8 @@ int main(int argc, char *argv[])
     GLuint game_texture = LoadTexture(RESOURCE_FOLDER"sheet.png");
     GameState mainMenu = GameState(0, true);
     GameState gameItself = GameState(1, false);
-    
     reset(gameItself, game_texture);
+    
     // Grand Finale!
     while (!done){
         ticks = (float)SDL_GetTicks()/1000.0f;
@@ -546,9 +550,9 @@ int main(int argc, char *argv[])
             }
             while (fixedElapsed >= FIXED_TIMESTEP ) {
                 fixedElapsed -= FIXED_TIMESTEP;
-                mainMenu.update(&program, font_texture, event, done, FIXED_TIMESTEP, gameItself, game_texture);
+                mainMenu.update(&program, font_texture, event, done, FIXED_TIMESTEP, gameItself, game_texture, currentState);
             }
-                mainMenu.update(&program, font_texture, event, done, fixedElapsed, gameItself, game_texture);
+                mainMenu.update(&program, font_texture, event, done, fixedElapsed, gameItself, game_texture, currentState);
                 mainMenu.render(&program, font_texture);
         }
         // update if the game's running
@@ -558,9 +562,9 @@ int main(int argc, char *argv[])
             }
             while (fixedElapsed >= FIXED_TIMESTEP ) {
                 fixedElapsed -= FIXED_TIMESTEP;
-                gameItself.update(&program, font_texture, event, done, FIXED_TIMESTEP, mainMenu, game_texture);
+                gameItself.update(&program, font_texture, event, done, FIXED_TIMESTEP, mainMenu, game_texture, currentState);
             }
-                gameItself.update(&program, font_texture, event, done, fixedElapsed, mainMenu, game_texture);
+                gameItself.update(&program, font_texture, event, done, fixedElapsed, mainMenu, game_texture, currentState);
                 gameItself.render(&program, font_texture);
         }
     }
