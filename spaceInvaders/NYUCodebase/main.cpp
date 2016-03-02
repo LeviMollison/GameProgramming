@@ -79,6 +79,9 @@ void DrawText(ShaderProgram *program, GLuint &fontTexture, std::string text, flo
     glEnableVertexAttribArray(program->texCoordAttribute);
     
     glDrawArrays(GL_TRIANGLES, 0, (float)(text.size() * 6));
+    
+    glDisableVertexAttribArray(program->positionAttribute);
+    glDisableVertexAttribArray(program->texCoordAttribute);
 }
 
 // Map the object's vertices to where they belong on the spritesheet and draw the object
@@ -133,6 +136,9 @@ public:
         
         // Then actually draw it
         glDrawArrays(GL_TRIANGLES, 0, ( (sizeof(vertices) / sizeof(float)) / 2));
+        
+        glDisableVertexAttribArray(program->positionAttribute);
+        glDisableVertexAttribArray(program->texCoordAttribute);
     }
 };
 
@@ -143,9 +149,10 @@ public:
     // Time to create them!
     Entity(SpriteSheet sprite, Matrix matrix, float x, float y, float width, float height, float rotation, float max_vel, bool affectedByPlayer, bool bullet, int direction)
     :sprite(sprite), matrix(matrix), x(x), y(y), width(width), height(height), rotation(rotation), max_vel(max_vel), affectedByPlayer(affectedByPlayer), bullet(bullet), direction(direction) {
+        alive = true;
         if (affectedByPlayer == true && !bullet){
             GLuint bullet_texture = LoadTexture(RESOURCE_FOLDER"sheet.png");
-            SpriteSheet bullet_sprite = SpriteSheet(bullet_texture, 143/1024, 377/1024, 43/1024, 31/1024, 1024);
+            SpriteSheet bullet_sprite = SpriteSheet(bullet_texture, 143/1024, 377/1024, 43/1024, 31/1024, 0.5);
             Matrix new_matrix;
             for (int i = 0; i < 5; i++){
                 Entity newBullet = Entity(bullet_sprite, new_matrix, -5, -5, 1.0, 1.0, 90.0f, 3.0f, true, true, 1);
@@ -187,8 +194,9 @@ public:
     bool usable;
     
     // Position the object
-    void position()
+    void position(ShaderProgram *program)
     {
+        program->setModelMatrix(matrix);
         matrix.identity();
         matrix.Translate(x, y, 0);
         matrix.Scale(width, height, 1.0f);
@@ -248,9 +256,8 @@ public:
             for(int i=0; i< stateObjects.size(); i++)
             {
                 if (stateObjects[i].alive){
-                    stateObjects[i].position();
+                    stateObjects[i].position(program);
                     stateObjects[i].sprite.draw(program);
-                    printf("Drawing Object %d Size of State Objects is still %d \n", i, (int)stateObjects.size());
                 }
             }
         }
@@ -311,12 +318,13 @@ void reset(GameState &state, GLuint &gameTexture){
     if (state.gameState == 1){
         state.stateObjects.clear();
         // Create the player and his bullets
-        SpriteSheet playerSprite = SpriteSheet(gameTexture, 211/1024, 941/1024, 99/1024, 75/1024, 1024);
+        SpriteSheet playerSprite = SpriteSheet(gameTexture, 211.0f/1024.0f, 941.0f/1024.0f, 99.0f/1024.0f, 75.0f/1024.0f, 0.3f);
         Matrix matrix;
         Entity player = Entity(playerSprite, matrix, 0.0f, -1.5f, 0.5f, 0.5f, 90.0f, 5.0f, true, false, 1);
         state.stateObjects.push_back(player);
+        
         // Create the 30 invaders
-        SpriteSheet invader = SpriteSheet(gameTexture, 423/1024, 728/1024, 93/1024, 84/1024, 1024);
+        SpriteSheet invader = SpriteSheet(gameTexture, 423.0f/1024.0f, 728.0f/1024.0f, 93.0f/1024.0f, 84.0f/1024.0f, 0.2f);
         float x_pos = -3.3f;
         float y_pos = 1.5f;
         float current_dir = 1;
@@ -348,7 +356,7 @@ void processEvents(SDL_Event &event, bool &done, float &timePerFrame, GameState&
     if (state.gameState == 1 && state.active){
         if (keys[SDL_SCANCODE_RIGHT] || keys[SDL_SCANCODE_D]){
             for (int i = 0; i<state.stateObjects.size(); i++) {
-                if (state.stateObjects[i].affectedByPlayer) {
+                if (state.stateObjects[i].affectedByPlayer && !state.stateObjects[i].bullet) {
                     state.stateObjects[i].direction = 1;
                     state.stateObjects[i].move(timePerFrame);
                 }
@@ -356,7 +364,7 @@ void processEvents(SDL_Event &event, bool &done, float &timePerFrame, GameState&
         }
         if (keys[SDL_SCANCODE_LEFT] || keys[SDL_SCANCODE_A]) {
             for (int i = 0; i<state.stateObjects.size(); i++) {
-                if (state.stateObjects[i].affectedByPlayer) {
+                if (state.stateObjects[i].affectedByPlayer && !state.stateObjects[i].bullet) {
                     state.stateObjects[i].direction = -1;
                     state.stateObjects[i].move(timePerFrame);
                 }
@@ -408,6 +416,7 @@ inline void GameState::update(ShaderProgram *program, GLuint &fontTexture, SDL_E
                     stateObjects[i].move(fixedElapsed);
                     if (stateObjects[i].x >= 3.50 || stateObjects[i].x < -3.50){
                         stateObjects[i].direction *= -1;
+                        stateObjects[i].move(fixedElapsed);
                         stateObjects[i].y -=0.5f;
                     }
                 }
@@ -449,7 +458,7 @@ inline void GameState::update(ShaderProgram *program, GLuint &fontTexture, SDL_E
                         // Move the bullet after checking if where it is was colliding
                         if (!currentBullet.usable){
                             currentBullet.move(fixedElapsed);
-                            if (currentBullet.y > 3.50){
+                            if (currentBullet.y > 2.0){
                                 currentBullet.y = -5;
                                 currentBullet.x = -5;
                                 currentBullet.usable = true;
@@ -513,8 +522,6 @@ inline void GameState::update(ShaderProgram *program, GLuint &fontTexture, SDL_E
 // cleans up anything the program was using
 void cleanUp(ShaderProgram *program)
 {
-    glDisableVertexAttribArray(program->positionAttribute);
-    glDisableVertexAttribArray(program->texCoordAttribute);
     SDL_Quit();
 }
 
