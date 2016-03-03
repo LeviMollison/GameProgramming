@@ -34,6 +34,7 @@ GLuint LoadTexture(const char *image_path) {
 
     GLuint textureID;
     glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_BGRA, GL_UNSIGNED_BYTE, surface->pixels);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -150,12 +151,13 @@ public:
     Entity(SpriteSheet sprite, Matrix matrix, float x, float y, float width, float height, float rotation, float max_vel, bool affectedByPlayer, bool bullet, int direction)
     :sprite(sprite), matrix(matrix), x(x), y(y), width(width), height(height), rotation(rotation), max_vel(max_vel), affectedByPlayer(affectedByPlayer), bullet(bullet), direction(direction) {
         alive = true;
+        usable = true;
         if (affectedByPlayer == true && !bullet){
             GLuint bullet_texture = LoadTexture(RESOURCE_FOLDER"sheet.png");
-            SpriteSheet bullet_sprite = SpriteSheet(bullet_texture, 143/1024, 377/1024, 43/1024, 31/1024, 0.5);
+            SpriteSheet bullet_sprite = SpriteSheet(bullet_texture, 224/1024, 664/1024, 101/1024, 84/1024, 1.0);
             Matrix new_matrix;
             for (int i = 0; i < 5; i++){
-                Entity newBullet = Entity(bullet_sprite, new_matrix, -5, -5, 1.0, 1.0, 90.0f, 3.0f, true, true, 1);
+                Entity newBullet = Entity(bullet_sprite, new_matrix, -5, -5, 1.0, 1.0, 90.0f, 1.0f, true, true, 1);
                 bullets.push_back(newBullet);
             }
         }
@@ -209,11 +211,20 @@ public:
     int direction;
     void move(float timePerFrame)
     {
-        velocity_x = max_vel;
-        x+= (float) direction * velocity_x * timePerFrame;
-        y+= velocity_y * timePerFrame;
-        velocity_x = 0;
-        velocity_y = 0;
+        if (!bullet){
+            velocity_x = max_vel;
+            x+= (float) direction * velocity_x * timePerFrame;
+            y+= velocity_y * timePerFrame;
+            velocity_x = 0;
+            velocity_y = 0;
+        }
+        else{
+            velocity_y = max_vel;
+            y+= (float)direction * velocity_y * timePerFrame;
+            x+= velocity_x *timePerFrame;
+            velocity_x = 0;
+            velocity_y = 0;
+        }
     }
 };
 
@@ -241,7 +252,7 @@ public:
     */
     void render(ShaderProgram *program, GLuint &fontTexture)
     {
-        glClearColor(0.8f, 0.5f, 0.8f, 1.0f);
+        glClearColor(0.7f, 0.3f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         Matrix projectionMatrix;
         Matrix viewMatrix;
@@ -258,6 +269,13 @@ public:
                 if (stateObjects[i].alive){
                     stateObjects[i].position(program);
                     stateObjects[i].sprite.draw(program);
+                   
+                    if (stateObjects[i].affectedByPlayer && !stateObjects[i].bullet){
+                        for (int j=0; j<stateObjects[i].bullets.size(); j++) {
+                            stateObjects[i].bullets[j].position(program);
+                            stateObjects[i].bullets[j].sprite.draw(program);
+                        }
+                    }
                 }
             }
         }
@@ -279,7 +297,9 @@ public:
         }
         if (gameState == 1 && !active){
             // Draw The Phrase "Game over, play again? (press p)
-            DrawText(program, fontTexture, "Game Over. Play Again? (press p)", 0.3f, 0.05f, -2.0f, 1.5f, modelMatrix);
+            DrawText(program, fontTexture, "Game Over. Play Again? (press p)", 0.3f, 0.05f, -2.0f, 1.0f, modelMatrix);
+            DrawText(program, fontTexture, "Play Again?", 0.3f, 0.05f, -2.0f, 0.5f, modelMatrix);
+            DrawText(program, fontTexture, "(press p)", 0.3f, 0.05f, -2.0f, 0.0f, modelMatrix);
         }
         
     
@@ -326,11 +346,11 @@ void reset(GameState &state, GLuint &gameTexture){
         // Create the 30 invaders
         SpriteSheet invader = SpriteSheet(gameTexture, 423.0f/1024.0f, 728.0f/1024.0f, 93.0f/1024.0f, 84.0f/1024.0f, 0.2f);
         float x_pos = -3.3f;
-        float y_pos = 1.5f;
+        float y_pos = 1.8f;
         float current_dir = 1;
         for (int i = 0; i < 30; i++){
             Matrix new_matrix;
-            Entity new_invader = Entity(invader, new_matrix, x_pos, y_pos, 1.0f, 1.0f, -90.0f, 2.0f, false, false, current_dir);
+            Entity new_invader = Entity(invader, new_matrix, x_pos, y_pos, 1.0f, 1.0f, -90.0f, 1.0f, false, false, current_dir);
             state.stateObjects.push_back(new_invader);
             x_pos+=0.5;
             if (i % 10 == 0){
@@ -351,6 +371,24 @@ void processEvents(SDL_Event &event, bool &done, float &timePerFrame, GameState&
         if (event.type == SDL_QUIT || event.type == SDL_WINDOWEVENT_CLOSE) {
             done = true;
         }
+        // Shoot the bullets. Was happening to fast, so needed to "poll" it down
+        if (event.type == SDL_KEYDOWN && state.gameState == 1 && state.active && keys[SDL_SCANCODE_SPACE]){
+            for (int i = 0; i<state.stateObjects.size(); i++){
+                if (state.stateObjects[i].affectedByPlayer && !state.stateObjects[i].bullet){
+                    bool foundEmptyBullet =false;
+                    for (int j=0;j<state.stateObjects[i].bullets.size();j++){
+                        if (state.stateObjects[i].bullets[j].usable && !foundEmptyBullet){
+                            state.stateObjects[i].bullets[j].usable = false;
+                            state.stateObjects[i].bullets[j].x = state.stateObjects[i].x;
+                            state.stateObjects[i].bullets[j].y = state.stateObjects[i].y+0.5;
+                            foundEmptyBullet = true;
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
     }
     // Handle player interaction with the game
     if (state.gameState == 1 && state.active){
@@ -367,22 +405,6 @@ void processEvents(SDL_Event &event, bool &done, float &timePerFrame, GameState&
                 if (state.stateObjects[i].affectedByPlayer && !state.stateObjects[i].bullet) {
                     state.stateObjects[i].direction = -1;
                     state.stateObjects[i].move(timePerFrame);
-                }
-            }
-        }
-        // Shoot the bullets
-        if (keys[SDL_SCANCODE_SPACE]){
-            for (int i = 0; i<state.stateObjects.size(); i++){
-                if (state.stateObjects[i].affectedByPlayer && !state.stateObjects[i].bullet){
-                    for (int j=0;j<state.stateObjects[i].bullets.size();j++){
-                        if (state.stateObjects[i].bullets[j].usable){
-                            state.stateObjects[i].bullets[i].usable = false;
-                            state.stateObjects[i].bullets[i].x = state.stateObjects[i].x;
-                            state.stateObjects[i].bullets[i].y = state.stateObjects[i].y+0.5;
-                            break;
-                        }
-                    }
-                    break;
                 }
             }
         }
@@ -429,14 +451,13 @@ inline void GameState::update(ShaderProgram *program, GLuint &fontTexture, SDL_E
             if (stateObjects[i].affectedByPlayer && !stateObjects[i].bullet){
                 for (int bulletIdx = 0; bulletIdx < stateObjects[i].bullets.size(); bulletIdx++){
                     if (!stateObjects[i].bullets[bulletIdx].usable){
-                        Entity currentBullet = stateObjects[i].bullets[bulletIdx];
                         float bulletTop, bulletBot, bulletLeft, bulletRight;
                         float invaderTop, invaderBot, invaderLeft, invaderRight;
                     
-                        bulletTop = currentBullet.y + currentBullet.height / 2.0f;
-                        bulletBot = currentBullet.y - currentBullet.height / 2.0f;
-                        bulletLeft = currentBullet.x - currentBullet.width / 2.0f;
-                        bulletRight = currentBullet.x + currentBullet.width / 2.0f;
+                        bulletTop = stateObjects[i].bullets[bulletIdx].y + stateObjects[i].bullets[bulletIdx].height / 2.0f;
+                        bulletBot = stateObjects[i].bullets[bulletIdx].y - stateObjects[i].bullets[bulletIdx].height / 2.0f;
+                        bulletLeft = stateObjects[i].bullets[bulletIdx].x - stateObjects[i].bullets[bulletIdx].width / 2.0f;
+                        bulletRight = stateObjects[i].bullets[bulletIdx].x + stateObjects[i].bullets[bulletIdx].width / 2.0f;
                     
                         for (int invaderIdx; invaderIdx < stateObjects.size(); invaderIdx++){
                            if (!stateObjects[invaderIdx].affectedByPlayer && !stateObjects[invaderIdx].bullet){
@@ -448,20 +469,20 @@ inline void GameState::update(ShaderProgram *program, GLuint &fontTexture, SDL_E
                                 // Now finally check collision
                                 if (!(bulletBot > invaderTop) && !(bulletTop < invaderBot) &&
                                 !(bulletLeft > invaderRight) && !(bulletRight < invaderLeft)){
-                                    currentBullet.usable = true;
-                                    currentBullet.x = -5;
-                                    currentBullet.y = -5;
+                                    stateObjects[i].bullets[bulletIdx].usable = true;
+                                    stateObjects[i].bullets[bulletIdx].x = -5;
+                                    stateObjects[i].bullets[bulletIdx].y = -5;
                                     stateObjects[invaderIdx].alive = false;
                                 }
                             }
                         }
                         // Move the bullet after checking if where it is was colliding
-                        if (!currentBullet.usable){
-                            currentBullet.move(fixedElapsed);
-                            if (currentBullet.y > 2.0){
-                                currentBullet.y = -5;
-                                currentBullet.x = -5;
-                                currentBullet.usable = true;
+                        if (!stateObjects[i].bullets[bulletIdx].usable){
+                            stateObjects[i].bullets[bulletIdx].move(fixedElapsed);
+                            if (stateObjects[i].bullets[bulletIdx].y > 2.0){
+                                stateObjects[i].bullets[bulletIdx].y = -5;
+                                stateObjects[i].bullets[bulletIdx].x = -5;
+                                stateObjects[i].bullets[bulletIdx].usable = true;
                             }
                         }
                     }
