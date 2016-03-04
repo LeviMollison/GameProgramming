@@ -484,8 +484,6 @@ inline void GameState::update(ShaderProgram *program, GLuint &fontTexture, SDL_E
                                 // Now finally check collision
                                 if (!(bulletBot > invaderTop) && !(bulletTop < invaderBot) && !(bulletLeft > invaderRight) && !(bulletRight < invaderLeft)){
                                     amountOfAliveInvaders--;
-                                    printf("invader Bot %f, invader Top %f, \n invader Left %f, invader Right %f \n", invaderBot, invaderTop, invaderLeft, invaderRight);
-                                    printf("bullet bot %f, bullet top %f, \n bullet left %f, bullet right %f", bulletTop, bulletBot, bulletLeft, bulletRight);
                                     stateObjects[i].bullets[bulletIdx].usable = true;
                                     stateObjects[i].bullets[bulletIdx].x = -5;
                                     stateObjects[i].bullets[bulletIdx].y = -5;
