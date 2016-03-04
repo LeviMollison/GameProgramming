@@ -154,10 +154,10 @@ public:
         usable = true;
         if (affectedByPlayer == true && !bullet){
             GLuint bullet_texture = LoadTexture(RESOURCE_FOLDER"sheet.png");
-            SpriteSheet bullet_sprite = SpriteSheet(bullet_texture, 224/1024, 664/1024, 101/1024, 84/1024, 1.0);
+            SpriteSheet bullet_sprite = SpriteSheet(bullet_texture, 809.0f/1024.0f, 437.0f/1024.0f, 19.0f/1024.0f, 30.0f/1024.0f, 0.5f);
             Matrix new_matrix;
             for (int i = 0; i < 5; i++){
-                Entity newBullet = Entity(bullet_sprite, new_matrix, -5, -5, 1.0, 1.0, 90.0f, 1.0f, true, true, 1);
+                Entity newBullet = Entity(bullet_sprite, new_matrix, -5.0f, -5.0f, 0.1, 0.2, 90.0f, 1.0f, true, true, 1.0);
                 bullets.push_back(newBullet);
             }
         }
@@ -245,6 +245,8 @@ public:
     std::vector<Entity> stateObjects;
     int gameState;
     bool active;
+    // What if you win?
+    int amountOfAliveInvaders;
     /* 
         Draws all objects to the screen
         Keep all methods that require elements from the entity in the entity itself
@@ -252,7 +254,6 @@ public:
     */
     void render(ShaderProgram *program, GLuint &fontTexture)
     {
-        glClearColor(0.7f, 0.3f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         Matrix projectionMatrix;
         Matrix viewMatrix;
@@ -297,9 +298,16 @@ public:
         }
         if (gameState == 1 && !active){
             // Draw The Phrase "Game over, play again? (press p)
-            DrawText(program, fontTexture, "Game Over. Play Again? (press p)", 0.3f, 0.05f, -2.0f, 1.0f, modelMatrix);
-            DrawText(program, fontTexture, "Play Again?", 0.3f, 0.05f, -2.0f, 0.5f, modelMatrix);
-            DrawText(program, fontTexture, "(press p)", 0.3f, 0.05f, -2.0f, 0.0f, modelMatrix);
+            if (amountOfAliveInvaders > 0){
+                DrawText(program, fontTexture, "Game Over.", 0.3f, 0.05f, -2.0f, 1.0f, modelMatrix);
+                DrawText(program, fontTexture, "Play Again?", 0.3f, 0.05f, -2.0f, 0.5f, modelMatrix);
+                DrawText(program, fontTexture, "(press p)", 0.3f, 0.05f, -2.0f, 0.0f, modelMatrix);
+            }
+            else if (amountOfAliveInvaders <= 0){
+                DrawText(program, fontTexture, "You Won!", 0.3f, 0.05f, -2.0f, 1.0f, modelMatrix);
+                DrawText(program, fontTexture, "Play Again?", 0.3f, 0.05f, -2.0f, 0.5f, modelMatrix);
+                DrawText(program, fontTexture, "(press p)", 0.3f, 0.05f, -2.0f, 0.0f, modelMatrix);
+            }
         }
         
     
@@ -350,7 +358,7 @@ void reset(GameState &state, GLuint &gameTexture){
         float current_dir = 1;
         for (int i = 0; i < 30; i++){
             Matrix new_matrix;
-            Entity new_invader = Entity(invader, new_matrix, x_pos, y_pos, 1.0f, 1.0f, -90.0f, 1.0f, false, false, current_dir);
+            Entity new_invader = Entity(invader, new_matrix, x_pos, y_pos, 0.5f, 0.5f, -90.0f, 1.0f, false, false, current_dir);
             state.stateObjects.push_back(new_invader);
             x_pos+=0.5;
             if (i % 10 == 0){
@@ -360,6 +368,7 @@ void reset(GameState &state, GLuint &gameTexture){
             }
             
         }
+        state.amountOfAliveInvaders = (int)state.stateObjects.size() - 1;
     }
 }
 
@@ -397,6 +406,9 @@ void processEvents(SDL_Event &event, bool &done, float &timePerFrame, GameState&
                 if (state.stateObjects[i].affectedByPlayer && !state.stateObjects[i].bullet) {
                     state.stateObjects[i].direction = 1;
                     state.stateObjects[i].move(timePerFrame);
+                    if(state.stateObjects[i].x >= 3.4){
+                        state.stateObjects[i].x = 3.4;
+                    }
                 }
             }
         }
@@ -405,6 +417,9 @@ void processEvents(SDL_Event &event, bool &done, float &timePerFrame, GameState&
                 if (state.stateObjects[i].affectedByPlayer && !state.stateObjects[i].bullet) {
                     state.stateObjects[i].direction = -1;
                     state.stateObjects[i].move(timePerFrame);
+                    if(state.stateObjects[i].x <= -3.4){
+                        state.stateObjects[i].x = -3.4;
+                    }
                 }
             }
         }
@@ -439,7 +454,7 @@ inline void GameState::update(ShaderProgram *program, GLuint &fontTexture, SDL_E
                     if (stateObjects[i].x >= 3.50 || stateObjects[i].x < -3.50){
                         stateObjects[i].direction *= -1;
                         stateObjects[i].move(fixedElapsed);
-                        stateObjects[i].y -=0.5f;
+                        stateObjects[i].y -=0.3f;
                     }
                 }
                 else if (!stateObjects[i].bullet && !stateObjects[i].alive){
@@ -459,16 +474,18 @@ inline void GameState::update(ShaderProgram *program, GLuint &fontTexture, SDL_E
                         bulletLeft = stateObjects[i].bullets[bulletIdx].x - stateObjects[i].bullets[bulletIdx].width / 2.0f;
                         bulletRight = stateObjects[i].bullets[bulletIdx].x + stateObjects[i].bullets[bulletIdx].width / 2.0f;
                     
-                        for (int invaderIdx; invaderIdx < stateObjects.size(); invaderIdx++){
+                        for (int invaderIdx = 0; invaderIdx < stateObjects.size(); invaderIdx++){
                            if (!stateObjects[invaderIdx].affectedByPlayer && !stateObjects[invaderIdx].bullet){
                                 invaderTop = stateObjects[invaderIdx].y + stateObjects[invaderIdx].height / 2.0f;
                                 invaderBot = stateObjects[invaderIdx].y - stateObjects[invaderIdx].height / 2.0f;
-                                invaderLeft = stateObjects[invaderIdx].x + stateObjects[invaderIdx].width / 2.0f;
-                                invaderRight = stateObjects[invaderIdx].x - stateObjects[invaderIdx].width / 2.0f;
+                                invaderLeft = stateObjects[invaderIdx].x - stateObjects[invaderIdx].width / 2.0f;
+                                invaderRight = stateObjects[invaderIdx].x + stateObjects[invaderIdx].width / 2.0f;
                                
                                 // Now finally check collision
-                                if (!(bulletBot > invaderTop) && !(bulletTop < invaderBot) &&
-                                !(bulletLeft > invaderRight) && !(bulletRight < invaderLeft)){
+                                if (!(bulletBot > invaderTop) && !(bulletTop < invaderBot) && !(bulletLeft > invaderRight) && !(bulletRight < invaderLeft)){
+                                    amountOfAliveInvaders--;
+                                    printf("invader Bot %f, invader Top %f, \n invader Left %f, invader Right %f \n", invaderBot, invaderTop, invaderLeft, invaderRight);
+                                    printf("bullet bot %f, bullet top %f, \n bullet left %f, bullet right %f", bulletTop, bulletBot, bulletLeft, bulletRight);
                                     stateObjects[i].bullets[bulletIdx].usable = true;
                                     stateObjects[i].bullets[bulletIdx].x = -5;
                                     stateObjects[i].bullets[bulletIdx].y = -5;
@@ -502,18 +519,20 @@ inline void GameState::update(ShaderProgram *program, GLuint &fontTexture, SDL_E
                 playerBot = player.y - player.height / 2.0f;
                 playerLeft = player.x - player.width / 2.0f;
                 playerRight = player.x + player.width / 2.0f;
-                 for (int invaderIdx; invaderIdx < stateObjects.size(); invaderIdx++){
+                 for (int invaderIdx = 0; invaderIdx < stateObjects.size(); invaderIdx++){
                     if (!stateObjects[invaderIdx].affectedByPlayer && !stateObjects[invaderIdx].bullet && stateObjects[invaderIdx].alive){
                         invaderTop = stateObjects[invaderIdx].y + stateObjects[invaderIdx].height / 2.0f;
                         invaderBot = stateObjects[invaderIdx].y - stateObjects[invaderIdx].height / 2.0f;
-                        invaderLeft = stateObjects[invaderIdx].x + stateObjects[invaderIdx].width / 2.0f;
-                        invaderRight = stateObjects[invaderIdx].x - stateObjects[invaderIdx].width / 2.0f;
+                        invaderLeft = stateObjects[invaderIdx].x - stateObjects[invaderIdx].width / 2.0f;
+                        invaderRight = stateObjects[invaderIdx].x + stateObjects[invaderIdx].width / 2.0f;
                         
-                         if (!(playerBot > invaderTop) && !(playerTop < invaderBot) &&
-                                !(playerLeft > invaderRight) && !(playerRight < invaderLeft)){
+                         if (!(playerBot > invaderTop) && !(playerTop < invaderBot) && !(playerLeft > invaderRight) && !(playerRight < invaderLeft)){
                                     active = false;
                                     player.alive = false;
                                 }
+                    }
+                    if (amountOfAliveInvaders <=0){
+                        active = false;
                     }
                  }
             }
@@ -526,10 +545,10 @@ inline void GameState::update(ShaderProgram *program, GLuint &fontTexture, SDL_E
             Ask the player if they want to play again, and if so tell them to press p
             Once they play again, set everyone to be alive again and to their original positions
         */
-        for (int playerIdx; playerIdx < stateObjects.size(); playerIdx++){
+        for (int playerIdx = 0; playerIdx < stateObjects.size(); playerIdx++){
             if (stateObjects[playerIdx].affectedByPlayer && !stateObjects[playerIdx].bullet){
                 Entity player = stateObjects[playerIdx];
-                for (int playerBulletsIdx; playerBulletsIdx<player.bullets.size(); playerBulletsIdx++){
+                for (int playerBulletsIdx = 0; playerBulletsIdx<player.bullets.size(); playerBulletsIdx++){
                     player.bullets[playerBulletsIdx].usable = true;
                     player.bullets[playerBulletsIdx].x = -5;
                     player.bullets[playerBulletsIdx].y = -5;
