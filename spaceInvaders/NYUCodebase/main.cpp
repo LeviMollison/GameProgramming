@@ -156,7 +156,7 @@ public:
             GLuint bullet_texture = LoadTexture(RESOURCE_FOLDER"sheet.png");
             SpriteSheet bullet_sprite = SpriteSheet(bullet_texture, 809.0f/1024.0f, 437.0f/1024.0f, 19.0f/1024.0f, 30.0f/1024.0f, 0.5f);
             Matrix new_matrix;
-            for (int i = 0; i < 5; i++){
+            for (int i = 0; i < 2; i++){
                 Entity newBullet = Entity(bullet_sprite, new_matrix, -5.0f, -5.0f, 0.1, 0.2, 90.0f, 1.0f, true, true, 1.0);
                 bullets.push_back(newBullet);
             }
