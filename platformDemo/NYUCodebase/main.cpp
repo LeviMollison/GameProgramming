@@ -96,70 +96,11 @@ void DrawText(ShaderProgram *program, GLuint &fontTexture, std::string text, flo
     glDisableVertexAttribArray(program->texCoordAttribute);
 }
 
-// Map the object's vertices to where they belong on the spritesheet and draw the object
-class SpriteSheet
-{
-public:
-    SpriteSheet();
-    SpriteSheet(GLuint texID, float uCoord, float vCoord, float wid, float hei, float sze)
-    : textureID(texID), u(uCoord), v(vCoord), width(wid), height(hei), size(sze)
-    {}
-    // left-x: (x position / image width), right-x: (x-position / image width)+(width/image width)
-    // top-y: (y position / image height), bottom-y: (y-position / image height)+(height of image / image width)
-    GLuint textureID;
-    float u;
-    float v;
-    float width;
-    float height;
-    float size;
-    
-    void draw(ShaderProgram *program)
-    {
-        // Bind the texture to be used
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        
-        // Texture Array
-        GLfloat texCoords[] = {
-            u, v+height,
-            u+width, v,
-            u, v,
-            u+width, v,
-            u, v+height,
-            u+width, v+height
-        };
-        // The size of the image related to the aspect of the UV map
-        float aspect = width / height;
-        // Vertices Array
-        float vertices[] = {
-        -0.5f * size * aspect, -0.5f * size,
-        0.5f * size * aspect, 0.5f * size,
-        -0.5f * size * aspect, 0.5f * size,
-        0.5f * size * aspect, 0.5f * size,
-        -0.5f * size * aspect, -0.5f * size ,
-        0.5f * size * aspect, -0.5f * size
-        };
-        // Map the vertex array to position attribute
-        glVertexAttribPointer(program->positionAttribute, 2, GL_FLOAT, false, 0, vertices);
-        glEnableVertexAttribArray(program->positionAttribute);
-        
-        // Map the texture array to the texture coordinate reader
-        glVertexAttribPointer(program->texCoordAttribute, 2, GL_FLOAT, false, 0, texCoords);
-        glEnableVertexAttribArray(program->texCoordAttribute);
-        
-        // Then actually draw it
-        glDrawArrays(GL_TRIANGLES, 0, ( (sizeof(vertices) / sizeof(float)) / 2));
-        
-        glDisableVertexAttribArray(program->positionAttribute);
-        glDisableVertexAttribArray(program->texCoordAttribute);
-    }
-    
-};
-
 // The Entity class, for each object we plan to draw into our program
 class Entity
 {
 public:
-    // Time to create them!
+    Entity(){}
     Entity(int spritePos, float x, float y, GLuint textureID):
     spritePos(spritePos), x(x), y(x), textureID(textureID)
     {}
@@ -168,11 +109,12 @@ public:
     
     // the matrix to modify the object's position
     Matrix matrix;
+    Matrix viewMatrix;
     float x;
     float y;
     // width and height (scalex and scaley)
-    float width;
-    float height;
+    float width = 1.0f;
+    float height = 1.0f;
     float rotation;
     
     std::string type;
@@ -204,7 +146,7 @@ public:
         matrix.Scale(width, height, 1.0f);
     }
     
-    void draw(){
+    void draw(ShaderProgram *program){
         float u = (float)(spritePos % SPRITE_COUNT_X) / (float) SPRITE_COUNT_X;
         float v = (float)(spritePos / SPRITE_COUNT_X) / (float) SPRITE_COUNT_Y;
                 
@@ -228,6 +170,20 @@ public:
             u+spriteWidth, v+(spriteHeight),
             u+spriteWidth, v
         });
+        
+        // Map the vertex array to position attribute
+        glVertexAttribPointer(program->positionAttribute, 2, GL_FLOAT, false, 0, tileVerts.data());
+        glEnableVertexAttribArray(program->positionAttribute);
+        
+        // Map the texture array to the texture coordinate reader
+        glVertexAttribPointer(program->texCoordAttribute, 2, GL_FLOAT, false, 0, tileTexts.data());
+        glEnableVertexAttribArray(program->texCoordAttribute);
+        
+        // Then actually draw it
+        glDrawArrays(GL_TRIANGLES, 0, ( (int)tileVerts.size() / 2));
+        
+        glDisableVertexAttribArray(program->positionAttribute);
+        glDisableVertexAttribArray(program->texCoordAttribute);
     }
    
     /*
@@ -330,10 +286,11 @@ public:
             }
             return true;
         }
-    
+    // maybe store the player in an vector of entities, or for this particular assignment just hardcode it
+    Entity player;
     // Place entity where it belongs in levelData
     void placeEntity(std::string& type, float placeX, float placeY){
-        
+        player = Entity(50, placeX, placeY, textureID);
     }
 
     bool readEntityData(std::ifstream& levelFile){
@@ -426,6 +383,10 @@ public:
                 }
             }
         }
+        
+        player.position(program);
+        player.draw(program);
+        
         // Map the vertex array to position attribute
         glVertexAttribPointer(program->positionAttribute, 2, GL_FLOAT, false, 0, tileVerts.data());
         glEnableVertexAttribArray(program->positionAttribute);
@@ -539,6 +500,7 @@ int main(int argc, char *argv[])
         ticks = (float)SDL_GetTicks()/1000.0f;
         fixedElapsed = ticks - elapsed;
         elapsed = ticks;
+        /* Need update function next */
         // update if the main menu is running, then render
         processEvents(event, done, elapsed, game);
         /*
@@ -551,7 +513,6 @@ int main(int argc, char *argv[])
         }
         */
             // Run update again
-            // Run render here, everything will be correct
             game.drawTiles(&program);
     }
 
