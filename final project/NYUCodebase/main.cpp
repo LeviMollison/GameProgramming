@@ -14,6 +14,12 @@
 #define RESOURCE_FOLDER "NYUCodebase.app/Contents/Resources/"
 #endif
 
+#define SPRITE_COUNT_X 30
+#define SPRITE_COUNT_Y 30
+#define TILE_SIZE 0.5f
+#define LEVEL_HEIGHT 32 // 4 rooms * 8 tiles per room
+#define LEVEL_WIDTH 32
+enum GameState {menu, game, endScreen};
 /*
     Final Project: Sonic Knock Off
     - Will be a 16x16 grid of rooms (how big are the rooms? debatable but 8x8 don't sound too big
@@ -49,6 +55,7 @@ void DrawText(ShaderProgram *program, GLuint &fontTexture, std::string text, flo
     float texture_size = 1.0/16.0f;
     std::vector<float> vertexData;
     std::vector<float> texCoordData;
+    
     for(int i=0; i < text.size(); i++) {
         float texture_x = (float)(((int)text[i]) % 16) / 16.0f;
         float texture_y = (float)(((int)text[i]) / 16) / 16.0f;
@@ -88,48 +95,160 @@ void DrawText(ShaderProgram *program, GLuint &fontTexture, std::string text, flo
     glDisableVertexAttribArray(program->texCoordAttribute);
 }
 
-// Map the object's vertices to where they belong on the spritesheet and draw the object
-class SpriteSheet
+// use enums to determine entity types
+
+// The Entity class, for each object we plan to draw into our program
+enum EntityType {};
+class Entity
 {
 public:
-    SpriteSheet();
-    SpriteSheet(GLuint texID, float uCoord, float vCoord, float wid, float hei, float sze)
-    : textureID(texID), u(uCoord), v(vCoord), width(wid), height(hei), size(sze)
-    {}
-    // left-x: (x position / image width), right-x: (x-position / image width)+(width/image width)
-    // top-y: (y position / image height), bottom-y: (y-position / image height)+(height of image / image width)
-    GLuint textureID;
-    float u;
-    float v;
-    float width;
-    float height;
-    float size;
+    Matrix matrix;
+    Matrix view;
     
-    void draw(ShaderProgram *program)
-    {
+    Entity(GLuint textureID, int spritePos, std::vector<std::vector<int>>& grid):textureID(textureID), spritePos(spritePos), grid(grid){
+        // Make the entity start on top of where the start block is
+        startPlayer(grid);
+    }
+    void update(float elapsed);
+    float x = 0.5f;
+    float y = 0.5f;
+    float width = TILE_SIZE;
+    float height = TILE_SIZE;
+    float velocity_x;
+    float velocity_y;
+    float acceleration_x;
+    float acceleration_y;
+    std::vector<std::vector<int>> grid;
+    
+    //Drawing
+    float size = 2.0;
+    float spritePos;
+    GLuint textureID;
+    
+    EntityType entityType;
+    bool collidedTop = false;
+    bool collidedBottom = false;
+    bool collidedLeft = false;
+    bool collidedRight = false;
+    
+    // Position the object
+    void position(ShaderProgram *program){
+
+        program->setModelMatrix(matrix);
+        matrix.identity();
+        matrix.Translate(x, y, 0);
+        matrix.Scale(width, height, 1.0f);
+        program->setViewMatrix(view);
+        view.identity();
+        view.Translate(-1.0*TILE_SIZE*x, -1.0*TILE_SIZE*y, 0.0);
+        view.Scale(width, height, 1.0f);
+    }
+    
+    void startPlayer(std::vector<std::vector<int>>& grid){
+        // Make entity start on top of where the start block is
+        for(int gridY = 0; gridY < LEVEL_HEIGHT; gridY++){
+            // Horizontal Now, for Checking
+            for(int gridX = 0; gridX < LEVEL_WIDTH; gridX++){
+               // Now go until you find starting point
+               if (grid[gridX][gridY] == 0){
+                    x = gridX * TILE_SIZE + TILE_SIZE/2.0;
+                    y = gridY * -1.0 * TILE_SIZE + TILE_SIZE/2.0;
+                    break;
+               }
+            }
+        }
+    }
+    
+    // One for enemies, the other for things on the grid
+    // 0 bottom,1 top,2 left,3 right
+    bool collidesWith(int area, std::vector<std::vector<int>>& grid){
+        // separate it into parts
+        // For every tile in the grid, if the area of the entity is colliding with the tile, return true
+        bool collided = false;
+        float playerTop = y + height / 2.0f;
+        float playerBot = y - height / 2.0f;
+        float playerLeft = x - width / 2.0f;
+        float playerRight = x + width / 2.0f;
+        
+        float tileTop;
+        float tileBot;
+        float tileLeft;
+        float tileRight;
+        for(int gridY = 0; gridY < LEVEL_HEIGHT; gridY++){
+            // Horizontal Now, for Checking
+            for(int gridX = 0; gridX < LEVEL_WIDTH; gridX++){
+               // Now go until you find starting point
+               if (grid[gridX][gridY] == 1){
+               tileRight = gridX * TILE_SIZE + TILE_SIZE;
+               tileLeft = gridX * TILE_SIZE;
+               tileTop = gridY * -1.0 * TILE_SIZE + TILE_SIZE;
+               tileBot = gridY * -1.0 * TILE_SIZE;
+               // Check Bottom of player
+               if(area ==0){
+                   if (playerBot < tileTop && playerBot > tileBot && playerRight <= tileRight && playerLeft >= tileLeft)
+                       collided = true;
+                }
+                // Check Top of player
+                if(area == 1){
+                    if(playerTop > tileBot && playerTop < tileTop && playerRight <= tileRight && playerLeft >= tileLeft)
+                        collided = true;
+                }
+                // Check left of player
+                if (area == 2){
+                    if(playerLeft < tileRight && playerRight > tileRight && playerTop <= tileTop && playerBot >= tileBot )
+                        collided = true;
+                }
+                // Check right of player
+                if (area == 3){
+                    if(playerRight > tileLeft && playerLeft < tileLeft && playerTop <= tileTop && playerBot >= tileBot)
+                        collided = true;
+                }
+                }
+            }
+        }
+        return collided;
+    }
+   
+    /*
+        Called when the player makes a command to move the player object
+        store the direction for spaceships
+    */
+    int direction;
+    void move(float timePerFrame){
+        
+    }
+    
+    void draw(ShaderProgram* program){
+        
         // Bind the texture to be used
         glBindTexture(GL_TEXTURE_2D, textureID);
-        
-        // Texture Array
-        GLfloat texCoords[] = {
-            u, v+height,
-            u+width, v,
-            u, v,
-            u+width, v,
-            u, v+height,
-            u+width, v+height
-        };
-        // The size of the image related to the aspect of the UV map
-        float aspect = width / height;
+    
+        float u = (float)(((int) spritePos) % SPRITE_COUNT_X) / (float) SPRITE_COUNT_X;
+        float v = (float)(((int) spritePos) / SPRITE_COUNT_X) / (float) SPRITE_COUNT_Y;
+    
+         float aspect = width / height;
         // Vertices Array
         float vertices[] = {
-        -0.5f * size * aspect, -0.5f * size,
-        0.5f * size * aspect, 0.5f * size,
-        -0.5f * size * aspect, 0.5f * size,
-        0.5f * size * aspect, 0.5f * size,
-        -0.5f * size * aspect, -0.5f * size ,
-        0.5f * size * aspect, -0.5f * size
+            -0.5f , -0.5f ,
+            0.5f , 0.5f ,
+            -0.5f  , 0.5f ,
+            0.5f , 0.5f ,
+            -0.5f , -0.5f  ,
+            0.5f , -0.5f
         };
+        
+        float textur = 1.0f / (float) SPRITE_COUNT_X;
+        GLfloat texCoords[] = {
+            u, v+textur,
+            u+textur, v,
+            u, v,
+            u+textur, v,
+            u, v+textur,
+            u+textur, v+textur
+        };
+        
+        position(program);
+    
         // Map the vertex array to position attribute
         glVertexAttribPointer(program->positionAttribute, 2, GL_FLOAT, false, 0, vertices);
         glEnableVertexAttribArray(program->positionAttribute);
@@ -146,64 +265,12 @@ public:
     }
 };
 
-// use enums to determine entity types
-
-// The Entity class, for each object we plan to draw into our program
-enum EntityType {};
-class Entity
-{
-public:
-    
-    // Let the spritesheet class handle the drawing
-    SpriteSheet sprite;
-    Matrix matrix;
-    
-    Entity();
-    void update(float elapsed);
-    void render(ShaderProgram *program);
-    bool collidesWith(Entity *entity);
-    float x;
-    float y;
-    float width;
-    float height;
-    float velocity_x;
-    float velocity_y;
-    float acceleration_x;
-    float acceleration_y;
-    
-    EntityType entityType;
-    bool collidedTop = false;
-    bool collidedBottom = false;
-    bool collidedLeft = false;
-    bool collidedRight = false;
-    
-    // Position the object
-    void position(ShaderProgram *program){
-        program->setModelMatrix(matrix);
-        matrix.identity();
-        matrix.Translate(x, y, 0);
-        matrix.Scale(width, height, 1.0f);
-    }
-   
-    /*
-        Called when the player makes a command to move the player object
-        store the direction for spaceships
-    */
-    int direction;
-    void move(float timePerFrame){
-        
-    }
-};
-
 // The solution path is essential to this entire game's production
 
 /*
     The solution path is an entire room wide/tall, orientation determined by random. It starts in the top row (a random start room) and randomly branches out until it hits the bottom row (exit room). If it hits a side that isnt on the bottom it tries immediatly to drop down. Once the solution path is determined, the game will build rooms that match the path. (example, if the path is a horizontal in the first room then the game will build a path that has exists for sure on the left and right.) We could make the solution path an object that stores the potential rooms and the necessary exits as it traverses through the level. 
     
         0: no definite exit, random entrance, fills up empty rooms not touched by solution path
-        1: left and right only
-        2: left right and top
-        3: left right and bottom
         4: left right top bottom
         
         Can allow the solution path object to interact with the room templates, forcing entrances that need to be open to remain that way
@@ -226,10 +293,9 @@ enum RoomTrail {start, journey, end, off};
     pass the room templates and the marked rooms into the map generator
 */
 
-class MapCoordinate{
+class MapCoord{
 public:
-    MapCoordinate();
-    MapCoordinate(int x, int y)
+    MapCoord(int x, int y)
     :x(x), y(y) {}
     int x;
     int y;
@@ -237,10 +303,10 @@ public:
 
 // This will progress the solution path to a neihbor block
 // pass in the current room, and return the next room.
-MapCoordinate progressPath(MapCoordinate currentRoom){
+MapCoord progressPath(MapCoord currentRoom){
     // Can go left(1) or right(2) or down(3)
-    int dir = rand()%3 + 1;
-    if (dir == 1){
+    int dir = rand()%600;
+    if (dir >= 500){
         if ((currentRoom.x -1) < 0){
             currentRoom.y +=1;
             return currentRoom;
@@ -251,7 +317,7 @@ MapCoordinate progressPath(MapCoordinate currentRoom){
         }
     }
     else
-    if(dir == 2){
+    if(dir >= 200){
             if ((currentRoom.x +1) > 3){
                 currentRoom.y +=1;
                 return currentRoom;
@@ -268,7 +334,9 @@ MapCoordinate progressPath(MapCoordinate currentRoom){
     
 }
 
-void solutionPath(){
+
+std::vector<std::vector<RoomTrail>> solutionPath(){
+    // pass into map generator
     std::vector<std::vector<RoomTrail>> mapPath;
     
     // Start with some dummy data
@@ -284,9 +352,7 @@ void solutionPath(){
     }
     bool beginning = true;
     bool makingPath = true;
-    MapCoordinate startRoom;
-    MapCoordinate currentRoom;
-    MapCoordinate endRoom;
+    MapCoord currentRoom = MapCoord(0, 0);
     
     // Now run the randomizer
     
@@ -299,10 +365,22 @@ void solutionPath(){
          // If it's the first run
             if (beginning){
                 beginning = false;
-                int startPlace = rand() % 4;
+                int startPlace = rand()% 400;
+                if (startPlace > 100){
+                    if (startPlace > 200){
+                        if (startPlace > 300){
+                                startPlace = 3;
+                        }
+                        else
+                            startPlace = 2;
+                    }
+                    else
+                        startPlace =1;
+                }
+                else
+                    startPlace = 0;
                 mapPath[startPlace][0] = start;
-                startRoom = MapCoordinate(startPlace, 0);
-                currentRoom = MapCoordinate(startPlace, 0);
+                currentRoom = MapCoord(startPlace, 0);
             }
             else{
                 // Now progress the room and store the journey marks
@@ -313,10 +391,10 @@ void solutionPath(){
                 if ((currentRoom.y+1)>3){
                     makingPath = false;
                     mapPath[currentRoom.x][currentRoom.y] = end;
-                    endRoom = MapCoordinate(currentRoom.x, currentRoom.y);
                 }
             }
     }
+    return mapPath;
     
 }
 
@@ -324,8 +402,236 @@ void solutionPath(){
     How will room templates work?
     A level will be comprised of 16 rooms (4x4). Each room will be 8x8, making a level a 32x32 monster.
     Rooms will be created after running the solution path creator.
+    Have 3 sets of rooms: A starting room, journey rooms, end room, and null rooms.
 */
 
+/*
+    Creates 8x8 grid describing how rooms will be layed out
+    Room 0: Null Room
+    Room 1: Start Room
+    Rooms 3: Journey Rooms
+        3: left right top bottom
+    Room 5: End room
+ 
+*/
+std::vector<std::vector<int>> RoomTemplate(RoomTrail temp){
+    std::vector<std::vector<int>> grid;
+    
+    if(temp == off){
+        grid = {
+            {1,1,1,6,6,1,1,1},
+            {1,6,6,3,6,6,5,1},
+            {1,6,6,3,6,3,5,1},
+            {1,6,3,3,1,3,10,6},
+            {1,6,3,4,1,3,10,6},
+            {1,6,3,3,3,3,1,1},
+            {1,6,3,3,3,1,5,1},
+            {1,1,1,6,6,1,1,1}
+        };
+    }
+    else if(temp ==start){
+        grid = {
+            {6,1,1,3,3,1,1,1},
+            {6,3,3,3,3,3,0,1},
+            {6,8,1,3,3,1,3,1},
+            {6,3,3,3,1,3,3,3},
+            {6,3,3,1,3,8,3,3},
+            {6,3,3,3,3,3,3,1},
+            {6,3,3,3,3,1,3,1},
+            {6,1,1,3,3,1,1,6}
+        };
+    }
+    else if (temp ==end){
+        grid = {
+            {6,1,1,3,3,1,1,6},
+            {1,3,3,3,3,3,6,5},
+            {1,3,1,3,1,3,1,5},
+            {3,3,1,8,5,3,3,3},
+            {3,3,1,4,1,3,3,3},
+            {1,8,5,3,6,3,1,5},
+            {1,3,3,3,3,9,1,5},
+            {6,1,1,3,3,1,1,6}
+        };
+    }
+    else if (temp ==journey){
+        grid = {
+            {6,1,1,3,3,1,1,6},
+            {1,3,3,3,3,3,6,5},
+            {1,3,1,3,1,3,1,5},
+            {3,3,1,8,5,3,3,3},
+            {3,3,1,4,1,3,3,3},
+            {1,8,5,3,6,3,1,5},
+            {1,3,3,3,3,3,1,5},
+            {6,1,1,3,3,1,1,6}
+        };
+    }
+    return grid;
+}
+
+ void update(GameState& state, ShaderProgram* program, GLuint fontTexture){
+        Matrix words;
+    }
+
+class Map{
+    // Now we need to make the map from the solution path
+public:
+    Map(GLuint textureID):textureID(textureID){
+        path = solutionPath();
+        createMap();
+    }
+    std::vector<std::vector<RoomTrail>> path;
+    std::vector<std::vector<int>> grid;
+    Matrix projectionMatrix;
+    GLuint textureID;
+    // for testing purpose
+    float x = 0;
+    float y = 0;
+    
+    void resetGrid(){
+        grid.clear();
+        for(int xAxis = 0; xAxis < LEVEL_WIDTH; xAxis++){
+            std::vector<int> dummy;
+            for(int yAxis = 0; yAxis < LEVEL_HEIGHT; yAxis++){
+                dummy.push_back(0);
+            }
+            grid.push_back(dummy);
+        }
+    }
+    
+    int tileToFill(int templateTile){
+         int dir = rand()%1000;
+         if(templateTile==5){
+             if(dir >= 500)
+                templateTile = 1;
+            else
+                templateTile = 2;
+        }
+        else if(templateTile==6){
+             if(dir >= 500)
+                templateTile = 1;
+            else
+                templateTile = 3;
+        }
+        else if(templateTile==7){
+             if(dir >= 500)
+                templateTile = 3;
+            else // For now, no enemies
+                templateTile = 3;
+        }
+        else if(templateTile==10){
+             if(dir >= 500)
+                templateTile = 3;
+            else
+                templateTile = 8;
+        }
+        return templateTile;
+    }
+    
+    void createMap(){
+        // Go through the path, add room templates as you progress
+        // Start with the solution path, keep a current template
+        // Horizontal
+        resetGrid();
+        std::vector<std::vector<int>> templateRoom;
+        for(int pathX = 0; pathX < 4; pathX++){
+            // Vertical, reset when you hit the end, up till the last one
+            for(int pathY = 0; pathY < 4; pathY++){
+               templateRoom = RoomTemplate(path[pathX][pathY]);
+               for(int gridX = (0 + pathX*8); gridX < (8 + 8*pathX); gridX++){
+                    for (int gridY = (0 + pathY*8); gridY < (8 + 8*pathY); gridY++){
+                        // don't forget some tiles are RNG based, handle the RNG here
+                        int tile = tileToFill(templateRoom[gridX - (8*pathX)][gridY - (pathY*8)]);
+                        grid[gridX][gridY] = tile;
+                    }
+               }
+            }
+        }
+        
+    }
+    
+    int positionInSheet(int gridData){
+        if(gridData == 0)
+            gridData = 497;
+        else if (gridData==1)
+            gridData = 123;
+        else if (gridData==2)
+            gridData = 70;
+        else if (gridData == 3)
+            gridData = 749;
+        else if (gridData ==4)
+            gridData = 749; // for now only
+        else if (gridData ==8)
+            gridData = 78;
+        else if (gridData == 9)
+            gridData = 280;
+        
+        return gridData;
+    }
+    void drawTiles(ShaderProgram *program, Entity& player){
+        std::vector<float> tileVerts;
+        std::vector<float> tileTexts;
+        Matrix model;
+    
+        projectionMatrix.setOrthoProjection(-3.55, 3.55, -2.0f, 2.0f, -1.0f, 1.0f);
+        glUseProgram(program->programID);
+        program->setProjectionMatrix(projectionMatrix);
+        // don't forget you need to bind the texture
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        
+        for (int y=0; y < LEVEL_HEIGHT; y++){
+            for (int x=0; x < LEVEL_WIDTH;  x++){
+                int positionInSpriteSheet = positionInSheet(grid[x][y]);
+                
+                // replace levelData call with it's position in spritesheet
+                float u = (float)(((int) positionInSpriteSheet) % SPRITE_COUNT_X) / (float) SPRITE_COUNT_X;
+                float v = (float)(((int) positionInSpriteSheet) / SPRITE_COUNT_X) / (float) SPRITE_COUNT_Y;
+                
+                float spriteWidth = 1.0f / (float) SPRITE_COUNT_X;
+                float spriteHeight = 1.0f / (float) SPRITE_COUNT_Y;
+                
+                tileVerts.insert(tileVerts.end(), {
+                    TILE_SIZE * x, -TILE_SIZE * y,
+                    TILE_SIZE * x, (-TILE_SIZE * y)-TILE_SIZE,
+                    (TILE_SIZE * x)+TILE_SIZE, (-TILE_SIZE * y)-TILE_SIZE,
+                    TILE_SIZE * x, -TILE_SIZE * y,
+                    (TILE_SIZE * x)+TILE_SIZE, (-TILE_SIZE * y)-TILE_SIZE,
+                    (TILE_SIZE * x)+TILE_SIZE, -TILE_SIZE * y
+                });
+                
+                tileTexts.insert(tileTexts.end(), {
+                    u, v,
+                    u, v+(spriteHeight),
+                    u+spriteWidth, v+(spriteHeight),
+                    u, v,
+                    u+spriteWidth, v+(spriteHeight),
+                    u+spriteWidth, v
+                });
+                
+            }
+        }
+        
+        // player.position(program);
+        player.draw(program);
+        program->setModelMatrix(model);
+        
+        // Map the vertex array to position attribute
+        glVertexAttribPointer(program->positionAttribute, 2, GL_FLOAT, false, 0, tileVerts.data());
+        glEnableVertexAttribArray(program->positionAttribute);
+        
+        // Map the texture array to the texture coordinate reader
+        glVertexAttribPointer(program->texCoordAttribute, 2, GL_FLOAT, false, 0, tileTexts.data());
+        glEnableVertexAttribArray(program->texCoordAttribute);
+        
+        // Then actually draw it
+        glDrawArrays(GL_TRIANGLES, 0, ( (int)tileVerts.size() / 2));
+        
+        glDisableVertexAttribArray(program->positionAttribute);
+        glDisableVertexAttribArray(program->texCoordAttribute);
+        
+    
+        SDL_GL_SwapWindow(displayWindow);
+    }
+};
 
 // Sets the program up
 void setup()
@@ -340,7 +646,7 @@ void setup()
 }
 
 // processes the input from out program
-void processEvents(SDL_Event &event, bool &done, float &timePerFrame)
+void processEvents(SDL_Event &event, bool &done, float &timePerFrame, Entity& player, GameState& state)
 {
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
     while (SDL_PollEvent(&event)) {
@@ -348,6 +654,62 @@ void processEvents(SDL_Event &event, bool &done, float &timePerFrame)
             done = true;
         }
     }
+    if (state == game){
+        if (keys[SDL_SCANCODE_UP]){
+            player.y+=0.1;
+        }
+        if (keys[SDL_SCANCODE_DOWN]){
+            player.y-=0.1;
+        }
+        if (keys[SDL_SCANCODE_LEFT]){
+            player.x-=0.1;
+        }
+        if (keys[SDL_SCANCODE_RIGHT]){
+            player.x+=0.1;
+        }
+        if (keys[SDL_SCANCODE_Q]){
+            state = menu;
+        }
+    }
+    else
+    if (state == menu){
+        if (keys[SDL_SCANCODE_P]){
+            state = game;
+        }
+        if (keys[SDL_SCANCODE_B]){
+            done = true;
+        }
+    }
+    
+}
+
+void render(GameState& state, Map& gameGrid, Entity& player, ShaderProgram* program, GLuint fontTexture){
+        Matrix words;
+    
+        glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+        Matrix projectionMatrix;
+        Matrix viewMatrix;
+        projectionMatrix.setOrthoProjection(-3.55, 3.55, -2.0f, 2.0f, -1.0f, 1.0f);
+        
+        glUseProgram(program->programID);
+        program->setViewMatrix(viewMatrix);
+        program->setProjectionMatrix(projectionMatrix);
+    
+        if (state == game){
+            gameGrid.drawTiles(program, player);
+        }
+        else if (state == menu){
+            DrawText(program, fontTexture, "Welcome to the Maze", 0.3f, 0.001f, -3.25f, 1.0f, words);
+            DrawText(program, fontTexture, "To Continue Press P", 0.3f, 0.001f, -3.25f, 0.5f, words);
+            DrawText(program, fontTexture, "To Quit Press B", 0.3f, 0.001f, -3.25f, 0.0f, words);
+        }
+
+        glDisable(GL_BLEND);
+        SDL_GL_SwapWindow(displayWindow);
 }
 
 
@@ -369,13 +731,16 @@ int main(int argc, char *argv[])
     
     SDL_Event event;
     bool done = false;
-    int currentState = 0;
+    GameState currentState = menu;
     float fixedElapsed = 0.0f;
     float ticks;
     float elapsed = 0.0f;
     GLuint font_texture;
     GLuint game_texture;
-    
+    game_texture = LoadTexture("spritesheet_rgba.png");
+    font_texture = LoadTexture("font1.png");
+    Map gameGrid = Map(game_texture);
+    Entity player = Entity(game_texture, 19, gameGrid.grid);
     // Grand Finale!
     while (!done){
         ticks = (float)SDL_GetTicks()/1000.0f;
@@ -383,15 +748,21 @@ int main(int argc, char *argv[])
         elapsed = ticks;
         // Game states as objects or enums?
         // update if the game's running
+        update(currentState, &program, font_texture);
             if(fixedElapsed > FIXED_TIMESTEP * MAX_TIMESTEPS) {
                 fixedElapsed = FIXED_TIMESTEP * MAX_TIMESTEPS;
             }
             while (fixedElapsed >= FIXED_TIMESTEP ) {
                 fixedElapsed -= FIXED_TIMESTEP;
                 // Run proper updates
+                update(currentState, &program, font_texture);
             }
                 // run update once again
+                update(currentState, &program, font_texture);
                 // Run render after updates
+                processEvents(event, done, fixedElapsed, player, currentState);
+                render(currentState, gameGrid, player, &program, font_texture);
+        
     }
 
     cleanUp(&program);
